@@ -14,6 +14,7 @@ use crossterm::{
 	Result,
 };
 use std::sync::mpsc;
+use std::sync::{Arc, Mutex, MutexGuard};
 use std::{io::stdout, thread, time};
 
 const HELP: &str = r#"Blocking poll() & non-blocking read()
@@ -22,17 +23,35 @@ const HELP: &str = r#"Blocking poll() & non-blocking read()
  - Hit "c" to print current cursor position
  - Use Esc to quit
 "#;
+struct Ui {
+	selected: u32,
+}
+impl Ui {
+	fn new() -> Self {
+		Self { selected: 0 }
+	}
+	fn do_event(&self, key: char) {}
+	fn paint(&self, res: &Vec<Content>) {
+		for el in res {
+			println!("{:?}", el);
+		}
+		println!("{:?}", res.len());
+		println!("");
+	}
+}
 
 pub struct View {
-	results: Vec<Content>,
-	pub rx: mpsc::Receiver<Content>,
+	results: Arc<Mutex<Vec<Content>>>,
+	prev_len: usize,
+	ui: Ui,
 }
 
 impl View {
-	pub fn new(rx: mpsc::Receiver<Content>) -> Self {
+	pub fn new(results: Arc<Mutex<Vec<Content>>>) -> Self {
 		Self {
-			results: Vec::new(),
-			rx,
+			results,
+			prev_len: 0,
+			ui: Ui::new(),
 		}
 	}
 	pub fn run(&mut self) -> Result<()> {
@@ -68,13 +87,13 @@ impl View {
 				// It's guaranteed that read() wont block if `poll` returns `Ok(true)`
 				let event = read()?;
 
-				// println!("Event::{:?}\r", event);
+				println!("Event::{:?}\r", event);
 
-				// if event == Event::Key(KeyCode::Char('c').into()) {
-				// 	println!("Cursor position: {:?}\r", position());
-				// }
-
+				if event == Event::Key(KeyCode::Char('c').into()) {
+					println!("Cursor position: {:?}\r", position());
+				}
 				if event == Event::Key(KeyCode::Esc.into()) {
+					// panic!();
 					break;
 				}
 			} else {
@@ -83,17 +102,15 @@ impl View {
 				// // Timeout expired, no event for 1s
 				// println!(".\r");
 			}
-			loop {
-				if let Ok(val) = self.rx.try_recv() {
-					println!("{}", val);
-					&self.results.push(val);
-				} else {
-					break;
-				}
-			}
-			println!("test");
-		}
 
+			let res = &*self.results.lock().unwrap();
+			let len = res.len();
+
+			if self.prev_len != len {
+				self.prev_len = len;
+				self.ui.paint(res);
+			}
+		}
 		Ok(())
 	}
 }

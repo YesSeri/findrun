@@ -31,3 +31,5 @@ Using the mvc pattern I need to implement several things. Listed in order of pri
 - View
 	- Should be a TUI type app so we can immediately can choose our result, before having searched everything.
 	- https://blog.logrocket.com/rust-and-tui-building-a-command-line-interface-in-rust/
+	- One solution is to code the TUI very much by hand in crossterm.
+	- Another solution is to do something like this https://monkeypatch.io/blog/2021/2021-05-31-rust-tui/

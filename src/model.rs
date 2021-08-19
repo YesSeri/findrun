@@ -2,6 +2,7 @@ use std::fmt::Display;
 use std::fmt::Result as FmtResult;
 use std::io::Error;
 use std::path::PathBuf;
+use std::sync::{Arc, Mutex};
 use walkdir::{DirEntry, WalkDir};
 
 #[derive(Debug, Clone)]
@@ -24,14 +25,18 @@ impl Display for Content {
 pub struct Finder<'a> {
 	search_phrase: &'a str,
 	search_location: PathBuf,
-	results: Vec<Content>,
+	results: Arc<Mutex<Vec<Content>>>,
 }
 impl<'a> Finder<'a> {
-	pub fn new(search_phrase: &'a str, search_location: PathBuf) -> Self {
+	pub fn new(
+		search_phrase: &'a str,
+		search_location: PathBuf,
+		results: Arc<Mutex<Vec<Content>>>,
+	) -> Self {
 		Self {
 			search_phrase,
 			search_location,
-			results: Vec::new(),
+			results,
 		}
 	}
 
@@ -40,14 +45,14 @@ impl<'a> Finder<'a> {
 			.to_str()
 			.map(|s| {
 				s.contains("$Recycle.Bin")
-					|| s.contains("$WINDOWS")
-					// || s.contains("Games")
-					|| s.contains("msys64")
-					|| s.starts_with('.')
+				// || s.contains("$WINDOWS")
+				// || s.contains("Games")
+				// || s.contains("msys64")
+				// || s.starts_with('.')
 			})
 			.unwrap_or(false)
 	}
-	pub fn search(&mut self, tx: std::sync::mpsc::Sender<Content>) -> Result<(), Error> {
+	pub fn search(&mut self) -> Result<(), Error> {
 		for entry in WalkDir::new(&self.search_location)
 		// .into_iter()
 		// .filter_entry(|e| !Self::is_ignored(e))
@@ -60,7 +65,8 @@ impl<'a> Finder<'a> {
 			if name.contains(&self.search_phrase) {
 				let path = entry.path().to_owned();
 				let content = Content::from(path, name);
-				tx.send(content).unwrap();
+				let mut results = self.results.lock().unwrap();
+				(*results).push(content);
 			}
 		}
 		Ok(())
