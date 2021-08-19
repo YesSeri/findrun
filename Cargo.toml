@@ -9,3 +9,5 @@ edition = "2018"
 [dependencies]
 open = "2.0.0"
 clap = "2.33.3"
+walkdir = "2.3.2"
+crossterm = "0.20.0"

@@ -1,5 +1,6 @@
 use clap::{App, Arg};
-pub fn get_args() -> (String, String) {
+use std::path::PathBuf;
+pub fn get_args() -> (String, PathBuf) {
 	let matches = App::new("FindRun")
 		.version("0.1")
 		.author("Henrik Zenkert <henrik.zenkert@gmail.com>")
@@ -22,8 +23,8 @@ pub fn get_args() -> (String, String) {
 				.help("Sets the level of verbosity"),
 		)
 		.get_matches();
-	(
-		matches.value_of("SEARCH_TERM").unwrap().to_string(),
-		matches.value_of("LOCATION").unwrap().to_string(),
-	)
+
+	let search_term = matches.value_of("SEARCH_TERM").unwrap().to_owned();
+	let location = PathBuf::from(matches.value_of("LOCATION").unwrap());
+	(search_term, location)
 }
