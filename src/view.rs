@@ -24,19 +24,33 @@ const HELP: &str = r#"Blocking poll() & non-blocking read()
  - Use Esc to quit
 "#;
 struct Ui {
-	selected: u32,
+	selected: Option<u32>,
+	input: String,
 }
 impl Ui {
 	fn new() -> Self {
-		Self { selected: 0 }
+		Self {
+			selected: None,
+			input: "".to_string(),
+		}
 	}
 	fn do_event(&self, key: char) {}
 	fn paint(&self, res: &Vec<Content>) {
 		for el in res {
 			println!("{:?}", el);
 		}
-		println!("{:?}", res.len());
+		println!("{:?}", self.input);
 		println!("");
+	}
+	fn backspace(&mut self) {
+		let mut chars = self.input.chars();
+		chars.next_back();
+		self.input = chars.as_str().to_string();
+	}
+	fn add_num(&mut self, c: char) {
+		if c.is_numeric() {
+			self.input = format!("{}{}", self.input, c);
+		}
 	}
 }
 
@@ -80,31 +94,40 @@ impl View {
 		loop {
 			// Wait up to 1s for another event
 			if poll(time::Duration::from_millis(1_000))? {
-				// loop {
-				// 	let time = time::Duration::from_millis(2000);
-				// 	thread::sleep(time);
-				// }
 				// It's guaranteed that read() wont block if `poll` returns `Ok(true)`
 				let event = read()?;
+				let key = match event {
+					Event::Key(key) => Some(key.code),
+					_ => None,
+				};
+				match key.unwrap() {
+					KeyCode::Char(c) => {
+						self.ui.add_num(c);
+					}
+					KeyCode::Backspace => {
+						self.ui.backspace();
+					}
+					KeyCode::Esc => break,
+					_ => (),
+				};
+			// self.ui.paint();
 
-				println!("Event::{:?}\r", event);
-
-				if event == Event::Key(KeyCode::Char('c').into()) {
-					println!("Cursor position: {:?}\r", position());
-				}
-				if event == Event::Key(KeyCode::Esc.into()) {
-					// panic!();
-					break;
-				}
+			// if event == Event::Key(KeyCode::Char('c').into()) {
+			// 	println!("Cursor position: {:?}\r", position());
+			// }
+			// if event == Event::Key(KeyCode::Esc.into()) {
+			// panic!();
+			// break;
+			// }
 			} else {
 				// let (x, y) = crossterm::terminal::size().unwrap();
 				// println!("{} {}", x, y);
 				// // Timeout expired, no event for 1s
 				// println!(".\r");
 			}
-
 			let res = &*self.results.lock().unwrap();
 			let len = res.len();
+			println!("new loop");
 
 			if self.prev_len != len {
 				self.prev_len = len;
