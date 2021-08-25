@@ -31,6 +31,7 @@ impl TerminalSize {
 pub struct View {
 	model_data: ModelData,
 	size: TerminalSize,
+	mark: usize,
 }
 
 impl View {
@@ -39,6 +40,7 @@ impl View {
 		Self {
 			model_data,
 			size: TerminalSize(x, y),
+			mark: 0,
 		}
 	}
 	pub fn run(&mut self) -> Result<()> {
@@ -64,7 +66,7 @@ impl View {
 		disable_raw_mode()
 	}
 	fn paint(&self) {
-		// println!("{}", self);
+		println!("{}", self);
 	}
 	fn handle_resize(&mut self, x: u16, y: u16) {
 		self.size = TerminalSize::new(x, y);
@@ -107,12 +109,17 @@ impl View {
 }
 impl fmt::Display for View {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		// let mut i = 0;
+		let mut i: usize = 0;
+		loop {
+			writeln!(f, "{}", &self.model_data.results.get(i).unwrap());
+			i += 1;
+			if i == self.size.1.into() || i == self.model_data.results.len() {
+				break;
+			}
+		}
 		// for r in self.model_data.results.iter() {
-		// 	writeln!(f, "[{}] - {} | {}", i, r.file_name, r.path.display());
-		// 	i += 1;
+		// 	writeln!(f, "{}", r);
 		// }
-		write!(f, "{}", self.model_data.results.len());
 		write!(f, "{}", self.model_data.get_input())
 	}
 }

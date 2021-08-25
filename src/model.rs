@@ -10,7 +10,7 @@ use walkdir::WalkDir;
 pub struct Content {
 	pub path: PathBuf,
 	pub file_name: String,
-	id: usize,
+	pub id: usize,
 }
 impl Content {
 	pub fn from(path: PathBuf, file_name: String, id: usize) -> Self {
@@ -23,7 +23,13 @@ impl Content {
 }
 impl Display for Content {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> FmtResult {
-		write!(f, "{} - {}", &self.file_name, &self.path.display())
+		write!(
+			f,
+			"[{}] | {} - {}",
+			&self.id,
+			&self.file_name,
+			&self.path.display()
+		)
 	}
 }
 
@@ -120,7 +126,8 @@ impl<'a> Finder<'a> {
 	// 		.unwrap_or(false)
 	// }
 	pub fn search(self) -> Result<(), Error> {
-		for (i, entry) in WalkDir::new(&self.search_location).into_iter().enumerate()
+		let mut id: usize = 0;
+		for entry in WalkDir::new(&self.search_location)
 		// .filter_entry(|e| !Self::is_ignored(e))
 		{
 			let entry = match entry {
@@ -130,7 +137,8 @@ impl<'a> Finder<'a> {
 			let name = entry.file_name().to_str().unwrap().to_string();
 			if name.contains(&self.search_phrase) {
 				let path = entry.path().to_owned();
-				let content = Content::from(path, name, i);
+				let content = Content::from(path, name, id);
+				id += 1;
 				self.tx.send(content).unwrap();
 			}
 		}
