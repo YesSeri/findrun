@@ -1,10 +1,10 @@
 mod args_parser;
 // use args_parser::get_args;
 mod model;
-use model::{Content, Finder};
+use model::{Content, Finder, ModelData};
 
-mod quality_control;
-use quality_control::Timer;
+// mod quality_control;
+// use quality_control::Timer;
 
 mod view;
 use view::View;
@@ -15,23 +15,21 @@ use std::thread;
 fn main() {
 	// let (search_phrase, location) = get_args();
 	let (tx, rx): (Sender<Content>, Receiver<Content>) = channel();
-	let (search_phrase, location) = (String::from(".pdf"), std::path::PathBuf::from("C:/Games"));
+	let (search_phrase, location) = (
+		String::from(".pdf"),
+		std::path::PathBuf::from("C:/Programming"),
+		// std::path::PathBuf::from("C:/Games"),
+	);
 	// dbg!(&search_phrase, &location);
 	let handle = thread::spawn(move || {
-		// let timer = Timer::start_timer();
-		let mut timer = Timer::new();
-		timer.start();
-		let mut searcher = Finder::new(&search_phrase, location);
-		searcher.search(tx).unwrap();
-		timer.stop();
-		println!("{:?}", timer.stop())
+		let finder = Finder::new(&search_phrase, location, tx);
+		finder.search().unwrap();
 	});
 
-	let mut view = View::new(rx);
+	let model_data = ModelData::new(rx);
+	let mut view = View::new(model_data);
 
 	view.run().unwrap();
+
 	handle.join().unwrap();
-	// for received in rx {
-	// 	println!("Got: {:?}", received);
-	// }
 }

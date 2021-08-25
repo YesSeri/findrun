@@ -5,34 +5,40 @@
 // 	Tick,
 // }
 
-use crate::model::Content;
+use crate::model::ModelData;
 use crossterm::{
-	cursor::position,
+	// cursor::position,
 	event::{poll, read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
 	execute,
 	terminal::{disable_raw_mode, enable_raw_mode},
 	Result,
 };
-use std::sync::mpsc;
-use std::{io::stdout, thread, time};
+use std::{fmt, io::stdout, time};
 
-const HELP: &str = r#"Blocking poll() & non-blocking read()
- - Keyboard, mouse and terminal resize events enabled
- - Prints "." every second if there's no event
- - Hit "c" to print current cursor position
- - Use Esc to quit
-"#;
+// const HELP: &str = r#"Blocking poll() & non-blocking read()
+//  - Keyboard, mouse and terminal resize events enabled
+//  - Prints "." every second if there's no event
+//  - Hit "c" to print current cursor position
+//  - Use Esc to quit
+// "#;
 
+struct TerminalSize(u16, u16);
+impl TerminalSize {
+	fn new(x: u16, y: u16) -> Self {
+		Self(x, y)
+	}
+}
 pub struct View {
-	results: Vec<Content>,
-	pub rx: mpsc::Receiver<Content>,
+	model_data: ModelData,
+	size: TerminalSize,
 }
 
 impl View {
-	pub fn new(rx: mpsc::Receiver<Content>) -> Self {
+	pub fn new(model_data: ModelData) -> Self {
+		let (x, y) = crossterm::terminal::size().unwrap();
 		Self {
-			results: Vec::new(),
-			rx,
+			model_data,
+			size: TerminalSize(x, y),
 		}
 	}
 	pub fn run(&mut self) -> Result<()> {
@@ -43,7 +49,7 @@ impl View {
 		Ok(())
 	}
 	fn init(&self, stdout: &mut std::io::Stdout) -> Result<()> {
-		println!("{}", HELP);
+		// println!("{}", HELP);
 		enable_raw_mode()?;
 		execute!(stdout, EnableMouseCapture)?;
 		Ok(())
@@ -57,8 +63,18 @@ impl View {
 		execute!(stdout, DisableMouseCapture)?;
 		disable_raw_mode()
 	}
+	fn paint(&self) {
+		// println!("{}", self);
+	}
+	fn handle_resize(&mut self, x: u16, y: u16) {
+		self.size = TerminalSize::new(x, y);
+	}
 	fn print_events(&mut self) -> Result<()> {
 		loop {
+			let has_updated = self.model_data.update_results();
+			if has_updated {
+				self.paint();
+			}
 			// Wait up to 1s for another event
 			if poll(time::Duration::from_millis(1_000))? {
 				// loop {
@@ -67,33 +83,36 @@ impl View {
 				// }
 				// It's guaranteed that read() wont block if `poll` returns `Ok(true)`
 				let event = read()?;
+				match event {
+					Event::Key(k) => self.model_data.input(k.code),
+					Event::Mouse(m) => println!("Mouse event: {:?}", m),
+					Event::Resize(x, y) => self.handle_resize(x, y),
+				}
 
 				// println!("Event::{:?}\r", event);
-
-				// if event == Event::Key(KeyCode::Char('c').into()) {
-				// 	println!("Cursor position: {:?}\r", position());
-				// }
-
 				if event == Event::Key(KeyCode::Esc.into()) {
 					break;
 				}
+				self.paint();
 			} else {
 				// let (x, y) = crossterm::terminal::size().unwrap();
 				// println!("{} {}", x, y);
 				// // Timeout expired, no event for 1s
 				// println!(".\r");
 			}
-			loop {
-				if let Ok(val) = self.rx.try_recv() {
-					println!("{}", val);
-					&self.results.push(val);
-				} else {
-					break;
-				}
-			}
-			println!("test");
 		}
 
 		Ok(())
+	}
+}
+impl fmt::Display for View {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		// let mut i = 0;
+		// for r in self.model_data.results.iter() {
+		// 	writeln!(f, "[{}] - {} | {}", i, r.file_name, r.path.display());
+		// 	i += 1;
+		// }
+		write!(f, "{}", self.model_data.results.len());
+		write!(f, "{}", self.model_data.get_input())
 	}
 }
