@@ -1,4 +1,3 @@
-use crossterm::event::KeyCode;
 use std::fmt::Display;
 use std::fmt::Result as FmtResult;
 use std::io::Error;
@@ -45,61 +44,15 @@ impl Display for Content {
 	}
 }
 
-pub enum ControlEvent {
-	Update,
-	Open,
-	Nothing,
-}
-#[derive(Debug)]
-pub struct UserInput(String);
-impl UserInput {
-	fn new() -> Self {
-		Self("".into())
-	}
-	fn input(&mut self, key_code: KeyCode) -> ControlEvent {
-		match key_code {
-			KeyCode::Char(c) => self.set_char(c),
-			KeyCode::Backspace => self.backspace(),
-			KeyCode::Enter => ControlEvent::Open,
-			KeyCode::Esc => {
-				println!("Program quit");
-				ControlEvent::Open
-			}
-			_ => ControlEvent::Nothing,
-		}
-	}
-	fn backspace(&mut self) -> ControlEvent {
-		if self.0.is_empty() {
-			ControlEvent::Nothing
-		} else {
-			let mut chars = self.0.chars();
-			chars.next_back();
-			self.0 = chars.collect();
-			ControlEvent::Update
-		}
-	}
-
-	fn set_char(&mut self, c: char) -> ControlEvent {
-		if c.is_ascii_digit() {
-			self.0 += &c.to_string();
-			ControlEvent::Update
-		} else {
-			ControlEvent::Nothing
-		}
-	}
-}
-
 #[derive(Debug)]
 pub struct ModelData {
 	pub results: Vec<Content>,
-	input: UserInput,
 	rx: mpsc::Receiver<Content>,
 }
 impl ModelData {
 	pub fn new(rx: mpsc::Receiver<Content>) -> Self {
 		Self {
 			results: vec![],
-			input: UserInput::new(),
 			rx,
 		}
 	}
@@ -110,12 +63,6 @@ impl ModelData {
 			self.results.push(val);
 		}
 		has_updated
-	}
-	pub fn input(&mut self, key_code: crossterm::event::KeyCode) -> ControlEvent {
-		self.input.input(key_code)
-	}
-	pub fn get_input(&self) -> Option<usize> {
-		self.input.0.parse::<usize>().ok()
 	}
 }
 

@@ -9,21 +9,23 @@ use model::{Content, Finder, ModelData};
 mod view;
 use view::View;
 
+mod controller;
+use controller::Controller;
+
 use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 // use std::time::Duration;
 fn main() {
 	let (search_phrase, location) = get_args();
 	let (tx, rx): (Sender<Content>, Receiver<Content>) = channel();
-	let handle = thread::spawn(move || {
+	thread::spawn(move || {
 		let finder = Finder::new(&search_phrase, location, tx);
 		finder.search().unwrap();
 	});
 
 	let model_data = ModelData::new(rx);
-	let mut view = View::new(model_data);
+	let view = View::new();
+	let mut controller = Controller::new(model_data, view);
 
-	view.run().unwrap();
-
-	handle.join().unwrap();
+	controller.run().unwrap();
 }
