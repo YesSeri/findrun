@@ -17,8 +17,8 @@ fn main() {
 	let (tx, rx): (Sender<Content>, Receiver<Content>) = channel();
 	let (search_phrase, location) = (
 		String::from(".pdf"),
-		std::path::PathBuf::from("/home/henrikz/Downloads"),
-		// std::path::PathBuf::from("C:/Games"),
+		// std::path::PathBuf::from("/home/henrikz/Downloads"),
+		std::path::PathBuf::from("C:/Games"),
 	);
 	let handle = thread::spawn(move || {
 		let finder = Finder::new(&search_phrase, location, tx);
