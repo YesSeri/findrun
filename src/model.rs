@@ -20,7 +20,18 @@ impl Content {
 			id,
 		}
 	}
-	pub fn open_file() {}
+	pub fn open_file(&self) {
+		match open::that(&self.path) {
+			Ok(()) => println!("Opened '{}' successfully.", &self.path.display()),
+			Err(err) => {
+				panic!(
+					"An error occurred when opening '{}': {}",
+					&self.path.display(),
+					err
+				)
+			}
+		}
+	}
 }
 impl Display for Content {
 	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> FmtResult {
@@ -50,14 +61,15 @@ impl UserInput {
 			KeyCode::Char(c) => self.set_char(c),
 			KeyCode::Backspace => self.backspace(),
 			KeyCode::Enter => ControlEvent::Open,
-			_ => {
-				println!("other");
-				ControlEvent::Nothing
+			KeyCode::Esc => {
+				println!("Program quit");
+				ControlEvent::Open
 			}
+			_ => ControlEvent::Nothing,
 		}
 	}
 	fn backspace(&mut self) -> ControlEvent {
-		if self.0.len() == 0 {
+		if self.0.is_empty() {
 			ControlEvent::Nothing
 		} else {
 			let mut chars = self.0.chars();
@@ -70,7 +82,7 @@ impl UserInput {
 	fn set_char(&mut self, c: char) -> ControlEvent {
 		if c.is_ascii_digit() {
 			self.0 += &c.to_string();
-			return ControlEvent::Update;
+			ControlEvent::Update
 		} else {
 			ControlEvent::Nothing
 		}
@@ -93,21 +105,17 @@ impl ModelData {
 	}
 	pub fn update_results(&mut self) -> bool {
 		let mut has_updated = false;
-		loop {
-			if let Ok(val) = self.rx.try_recv() {
-				has_updated = true;
-				&self.results.push(val);
-			} else {
-				break;
-			}
+		while let Ok(val) = self.rx.try_recv() {
+			has_updated = true;
+			self.results.push(val);
 		}
 		has_updated
 	}
 	pub fn input(&mut self, key_code: crossterm::event::KeyCode) -> ControlEvent {
 		self.input.input(key_code)
 	}
-	pub fn get_input(&self) -> &str {
-		&self.input.0
+	pub fn get_input(&self) -> Option<usize> {
+		self.input.0.parse::<usize>().ok()
 	}
 }
 

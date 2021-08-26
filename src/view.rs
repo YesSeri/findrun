@@ -78,43 +78,32 @@ impl View {
 			if has_updated {
 				self.paint();
 			}
-			// Wait up to 1s for another event
 			if poll(time::Duration::from_millis(1_000))? {
-				// loop {
-				// 	let time = time::Duration::from_millis(2000);
-				// 	thread::sleep(time);
-				// }
-				// It's guaranteed that read() wont block if `poll` returns `Ok(true)`
 				let event = read()?;
 				let control_event: ControlEvent = match event {
 					Event::Key(k) => self.model_data.input(k.code),
-					// Event::Mouse(m) => println!("Mouse event: {:?}", m),
 					Event::Resize(x, y) => {
 						self.handle_resize(x, y);
 						ControlEvent::Nothing
 					}
-					Event::Mouse(m) => ControlEvent::Nothing,
+					Event::Mouse(_) => ControlEvent::Nothing,
 				};
 
-				// println!("Event::{:?}\r", event);
 				if event == Event::Key(KeyCode::Esc.into()) {
 					break;
 				}
 				match control_event {
 					ControlEvent::Open => {
-						// let i = self.model_data.get_input();
-						dbg!("OPENING");
-						let path = &self.model_data.results.get(0).unwrap().path;
-						open::that(path).unwrap();
+						let i = self.model_data.get_input();
+						if let Some(index) = i {
+							if let Some(content) = &self.model_data.results.get(index) {
+								content.open_file();
+							}
+						}
 					}
 					ControlEvent::Update => self.paint(),
 					_ => {}
 				}
-			} else {
-				// let (x, y) = crossterm::terminal::size().unwrap();
-				// println!("{} {}", x, y);
-				// // Timeout expired, no event for 1s
-				// println!(".\r");
 			}
 		}
 
@@ -124,11 +113,23 @@ impl View {
 impl fmt::Display for View {
 	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
 		// This clears the terminal from previous printed stuff
-		print!("{}[2J", 27 as char);
-		for (i, res) in self.model_data.results.iter().enumerate() {
-			write!(f, "{}", res)?;
+		// print!("{}[2J", 27 as char);
+		for i in self.mark..self.size.1 as usize - 2 {
+			if let Some(c) = self.model_data.results.get(i) {
+				write!(f, "{}", c)?;
+			}
 		}
-		write!(f, "{}\r\n", self.model_data.get_input());
+		// for res in self.model_data.results.iter() {
+		// write!(f, "{}", res)?;
+		// }
+
+		// let x = &self.model_data.results.as_slice();
+		// println!("{:#?}", x);
+		if let Some(i) = self.model_data.get_input() {
+			write!(f, "{}\r\n", i);
+		} else {
+			write!(f, "\r\n");
+		}
 		Ok(())
 	}
 }

@@ -1,5 +1,5 @@
 mod args_parser;
-// use args_parser::get_args;
+use args_parser::get_args;
 mod model;
 use model::{Content, Finder, ModelData};
 
@@ -13,13 +13,8 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 use std::thread;
 // use std::time::Duration;
 fn main() {
-	// let (search_phrase, location) = get_args();
+	let (search_phrase, location) = get_args();
 	let (tx, rx): (Sender<Content>, Receiver<Content>) = channel();
-	let (search_phrase, location) = (
-		String::from(".pdf"),
-		// std::path::PathBuf::from("/home/henrikz/Downloads"),
-		std::path::PathBuf::from("C:/Games"),
-	);
 	let handle = thread::spawn(move || {
 		let finder = Finder::new(&search_phrase, location, tx);
 		finder.search().unwrap();
