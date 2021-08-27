@@ -22,7 +22,9 @@ impl TerminalSize {
 }
 pub struct View {
 	size: TerminalSize,
-	mark: usize,
+	entry_mark: usize,
+	page_mark: usize,
+	is_full: bool,
 }
 
 impl View {
@@ -30,26 +32,51 @@ impl View {
 		let (x, y) = crossterm::terminal::size().unwrap();
 		Self {
 			size: TerminalSize(x, y),
-			mark: 0,
+			entry_mark: 0,
+			page_mark: 0,
+			is_full: false,
 		}
 	}
-	pub fn paint(&self, data: &ModelData, user_input: &UserInput) {
+	pub fn paint(&self, data: &ModelData, user_input: &UserInput) -> Option<crate::model::Content> {
 		print!("\x1B[2J");
-		let range = self.mark..self.size.1 as usize + self.mark - 2;
+		let mut entry = 0;
+		let mut content = None;
+		let range = self.page_mark..self.size.1 as usize + self.page_mark - 2;
 		for i in range {
 			if let Some(c) = data.results.get(i) {
+				if entry == self.entry_mark {
+					print!(">>>");
+					content = Some(c.clone());
+				}
 				print!("{}", c);
 			}
+			entry += 1;
 		}
-		print!("{}\n", user_input);
+		println!("{}", user_input);
+		content
 	}
-	pub fn next_page(&mut self) {
-		self.mark += self.size.1 as usize;
+	pub fn next_page(&mut self, len: usize) {
+		if self.page_mark > len.saturating_sub(self.size.1 as usize) {
+			return;
+		}
+		self.page_mark += self.size.1 as usize;
 	}
 	pub fn prev_page(&mut self) {
-		self.mark -= self.size.1 as usize;
+		self.page_mark = self.page_mark.saturating_sub(self.size.1 as usize);
+	}
+	pub fn next_entry(&mut self) {
+		if self.entry_mark > self.size.1 as usize - 4 {
+			return;
+		}
+		self.entry_mark += 1;
+	}
+	pub fn prev_entry(&mut self) {
+		self.entry_mark = self.entry_mark.saturating_sub(1);
 	}
 	pub fn handle_resize(&mut self, x: u16, y: u16) {
+		if ((y - 3) as usize) < self.entry_mark {
+			self.entry_mark = (y - 3) as usize
+		}
 		self.size = TerminalSize::new(x, y);
 	}
 }

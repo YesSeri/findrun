@@ -1,4 +1,4 @@
-use crate::model::ModelData;
+use crate::model::{Content, ModelData};
 use crate::view::View;
 use crossterm::{
 	// cursor::position,
@@ -19,6 +19,7 @@ pub enum ControlEvent {
 pub struct Controller {
 	data: ModelData,
 	view: View,
+	selected_content: Option<Content>,
 	user_input: UserInput,
 }
 
@@ -27,6 +28,7 @@ impl Controller {
 		Self {
 			data,
 			view,
+			selected_content: None,
 			user_input: UserInput::new(),
 		}
 	}
@@ -56,7 +58,7 @@ impl Controller {
 		loop {
 			let has_updated = self.data.update_results();
 			if has_updated {
-				self.view.paint(&self.data, &self.user_input);
+				self.selected_content = self.view.paint(&self.data, &self.user_input);
 			}
 			if poll(time::Duration::from_millis(1_000))? {
 				let event = read()?;
@@ -79,9 +81,13 @@ impl Controller {
 							if let Some(content) = self.data.results.get(index) {
 								content.open_file();
 							}
+						} else if let Some(content) = &self.selected_content {
+							content.open_file();
 						}
 					}
-					ControlEvent::Update => self.view.paint(&self.data, &self.user_input),
+					ControlEvent::Update => {
+						self.selected_content = self.view.paint(&self.data, &self.user_input);
+					}
 					_ => {}
 				}
 			}
@@ -94,7 +100,15 @@ impl Controller {
 			KeyCode::Backspace => self.user_input.backspace(),
 			KeyCode::Enter => ControlEvent::Open,
 			KeyCode::Right => {
-				self.view.next_page();
+				self.view.next_page(self.data.results.len());
+				ControlEvent::Update
+			}
+			KeyCode::Up => {
+				self.view.prev_entry();
+				ControlEvent::Update
+			}
+			KeyCode::Down => {
+				self.view.next_entry();
 				ControlEvent::Update
 			}
 			KeyCode::Left => {
