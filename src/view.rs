@@ -34,7 +34,9 @@ impl View {
 		}
 	}
 	pub fn paint(&self, data: &ModelData, user_input: &UserInput) {
-		for i in self.mark..self.size.1 as usize - 2 {
+		print!("\x1B[2J");
+		let range = self.mark..self.size.1 as usize + self.mark - 2;
+		for i in range {
 			if let Some(c) = data.results.get(i) {
 				print!("{}", c);
 			}

@@ -9,6 +9,7 @@ use crossterm::{
 };
 use std::{fmt, io::stdout, time};
 
+#[derive(Debug)]
 pub enum ControlEvent {
 	Update,
 	Open,
@@ -94,6 +95,10 @@ impl Controller {
 			KeyCode::Enter => ControlEvent::Open,
 			KeyCode::Right => {
 				self.view.next_page();
+				ControlEvent::Update
+			}
+			KeyCode::Left => {
+				self.view.prev_page();
 				ControlEvent::Update
 			}
 			KeyCode::Esc => {
