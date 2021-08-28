@@ -5,135 +5,78 @@
 // 	Tick,
 // }
 
-use crate::model::Content;
-use crossterm::{
-	cursor::position,
-	event::{poll, read, DisableMouseCapture, EnableMouseCapture, Event, KeyCode},
-	execute,
-	terminal::{disable_raw_mode, enable_raw_mode},
-	Result,
-};
-use std::sync::mpsc;
-use std::sync::{Arc, Mutex, MutexGuard};
-use std::{io::stdout, thread, time};
+use crate::controller::UserInput;
+use crate::model::ModelData;
+// const HELP: &str = r#"Blocking poll() & non-blocking read()
+//  - Keyboard, mouse and terminal resize events enabled
+//  - Prints "." every second if there's no event
+//  - Hit "c" to print current cursor position
+//  - Use Esc to quit
+// "#;
 
-const HELP: &str = r#"Blocking poll() & non-blocking read()
- - Keyboard, mouse and terminal resize events enabled
- - Prints "." every second if there's no event
- - Hit "c" to print current cursor position
- - Use Esc to quit
-"#;
-struct Ui {
-	selected: Option<u32>,
-	input: String,
-}
-impl Ui {
-	fn new() -> Self {
-		Self {
-			selected: None,
-			input: "".to_string(),
-		}
-	}
-	fn do_event(&self, key: char) {}
-	fn paint(&self, res: &Vec<Content>) {
-		for el in res {
-			println!("{:?}", el);
-		}
-		println!("{:?}", self.input);
-		println!("");
-	}
-	fn backspace(&mut self) {
-		let mut chars = self.input.chars();
-		chars.next_back();
-		self.input = chars.as_str().to_string();
-	}
-	fn add_num(&mut self, c: char) {
-		if c.is_numeric() {
-			self.input = format!("{}{}", self.input, c);
-		}
+struct TerminalSize(u16, u16);
+impl TerminalSize {
+	fn new(x: u16, y: u16) -> Self {
+		Self(x, y)
 	}
 }
-
 pub struct View {
-	results: Arc<Mutex<Vec<Content>>>,
-	prev_len: usize,
-	ui: Ui,
+	size: TerminalSize,
+	entry_mark: usize,
+	page_mark: usize,
+	is_full: bool,
 }
 
 impl View {
-	pub fn new(results: Arc<Mutex<Vec<Content>>>) -> Self {
+	pub fn new() -> Self {
+		let (x, y) = crossterm::terminal::size().unwrap();
 		Self {
-			results,
-			prev_len: 0,
-			ui: Ui::new(),
+			size: TerminalSize(x, y),
+			entry_mark: 0,
+			page_mark: 0,
+			is_full: false,
 		}
 	}
-	pub fn run(&mut self) -> Result<()> {
-		let mut stdout = stdout();
-		self.init(&mut stdout)?;
-		self.execute();
-		self.exit(&mut stdout)?;
-		Ok(())
-	}
-	fn init(&self, stdout: &mut std::io::Stdout) -> Result<()> {
-		println!("{}", HELP);
-		enable_raw_mode()?;
-		execute!(stdout, EnableMouseCapture)?;
-		Ok(())
-	}
-	fn execute(&mut self) {
-		if let Err(e) = self.print_events() {
-			eprintln!("Error: {:?}\r", e);
-		}
-	}
-	fn exit(&self, stdout: &mut std::io::Stdout) -> Result<()> {
-		execute!(stdout, DisableMouseCapture)?;
-		disable_raw_mode()
-	}
-	fn print_events(&mut self) -> Result<()> {
-		loop {
-			// Wait up to 1s for another event
-			if poll(time::Duration::from_millis(1_000))? {
-				// It's guaranteed that read() wont block if `poll` returns `Ok(true)`
-				let event = read()?;
-				let key = match event {
-					Event::Key(key) => Some(key.code),
-					_ => None,
-				};
-				match key.unwrap() {
-					KeyCode::Char(c) => {
-						self.ui.add_num(c);
-					}
-					KeyCode::Backspace => {
-						self.ui.backspace();
-					}
-					KeyCode::Esc => break,
-					_ => (),
-				};
-			// self.ui.paint();
-
-			// if event == Event::Key(KeyCode::Char('c').into()) {
-			// 	println!("Cursor position: {:?}\r", position());
-			// }
-			// if event == Event::Key(KeyCode::Esc.into()) {
-			// panic!();
-			// break;
-			// }
-			} else {
-				// let (x, y) = crossterm::terminal::size().unwrap();
-				// println!("{} {}", x, y);
-				// // Timeout expired, no event for 1s
-				// println!(".\r");
+	pub fn paint(&self, data: &ModelData, user_input: &UserInput) -> Option<crate::model::Content> {
+		print!("\x1B[2J");
+		let mut entry = 0;
+		let mut content = None;
+		let range = self.page_mark..self.size.1 as usize + self.page_mark - 2;
+		for i in range {
+			if let Some(c) = data.results.get(i) {
+				if entry == self.entry_mark {
+					print!(">>>");
+					content = Some(c.clone());
+				}
+				print!("{}", c);
 			}
-			let res = &*self.results.lock().unwrap();
-			let len = res.len();
-			println!("new loop");
-
-			if self.prev_len != len {
-				self.prev_len = len;
-				self.ui.paint(res);
-			}
+			entry += 1;
 		}
-		Ok(())
+		println!("{}", user_input);
+		content
+	}
+	pub fn next_page(&mut self, len: usize) {
+		if self.page_mark > len.saturating_sub(self.size.1 as usize) {
+			return;
+		}
+		self.page_mark += self.size.1 as usize;
+	}
+	pub fn prev_page(&mut self) {
+		self.page_mark = self.page_mark.saturating_sub(self.size.1 as usize);
+	}
+	pub fn next_entry(&mut self) {
+		if self.entry_mark > self.size.1 as usize - 4 {
+			return;
+		}
+		self.entry_mark += 1;
+	}
+	pub fn prev_entry(&mut self) {
+		self.entry_mark = self.entry_mark.saturating_sub(1);
+	}
+	pub fn handle_resize(&mut self, x: u16, y: u16) {
+		if ((y - 3) as usize) < self.entry_mark {
+			self.entry_mark = (y - 3) as usize
+		}
+		self.size = TerminalSize::new(x, y);
 	}
 }
