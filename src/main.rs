@@ -20,7 +20,13 @@ fn main() {
 	let (tx, rx): (Sender<Content>, Receiver<Content>) = channel();
 	thread::spawn(move || {
 		let finder = Finder::new(&search_phrase, location, tx);
-		finder.search().unwrap();
+		match finder.search() {
+			Ok(_) => (),
+			Err(_) => {
+				println!("No results were found");
+				std::process::exit(0);
+			}
+		}
 	});
 
 	let model_data = ModelData::new(rx);

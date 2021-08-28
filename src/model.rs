@@ -1,6 +1,5 @@
-use std::fmt::Display;
-use std::fmt::Result as FmtResult;
-use std::io::Error;
+use std::fmt;
+use std::io;
 use std::path::PathBuf;
 use std::sync::mpsc;
 use walkdir::WalkDir;
@@ -32,8 +31,8 @@ impl Content {
 		}
 	}
 }
-impl Display for Content {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> FmtResult {
+impl fmt::Display for Content {
+	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
 		write!(
 			f,
 			"| [{}] | {} {}\r\n",
@@ -97,7 +96,7 @@ impl<'a> Finder<'a> {
 	// 		})
 	// 		.unwrap_or(false)
 	// }
-	pub fn search(self) -> Result<(), Error> {
+	pub fn search(self) -> Result<(), Box<dyn std::error::Error>> {
 		let mut id: usize = 0;
 		for entry in WalkDir::new(&self.search_location)
 		// .filter_entry(|e| !Self::is_ignored(e))
@@ -114,6 +113,10 @@ impl<'a> Finder<'a> {
 				self.tx.send(content).unwrap();
 			}
 		}
+		if id == 0 {
+			return Err("No results were found".into());
+		}
+		println!("Search finished.");
 		Ok(())
 	}
 }
@@ -121,8 +124,5 @@ impl<'a> Finder<'a> {
 #[cfg(test)]
 mod tests {
 	#[test]
-	fn it_works() {
-		// let f = Finder::new("text.txt", std::path::PathBuf::from("./test/bbb"));
-		// f.search().unwrap();
-	}
+	fn it_works() {}
 }
