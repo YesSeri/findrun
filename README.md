@@ -19,7 +19,7 @@ I want the tui interface to open at once, and the search to go immediately. When
 
 Everytime you open a match, that folder gets added to saved to a list of high priority folders. These are saved and are the first ones to be searched.
 
-## Things to do
+## Thoughts
 Using the mvc pattern I need to implement several things. Listed in order of priority, kind of.
 
 
@@ -36,3 +36,9 @@ Using the mvc pattern I need to implement several things. Listed in order of pri
 
 - Controller
 	- Keeps track of everything.
+
+## To Do
+- Regex search
+- Fuzzy search
+- Fuzzy search for found results
+	- When you enter a string after searching the results found so far should be fuzzy searched through. 
