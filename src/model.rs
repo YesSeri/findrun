@@ -1,5 +1,4 @@
 use std::fmt;
-use std::io;
 use std::path::PathBuf;
 use std::sync::mpsc;
 use walkdir::WalkDir;
@@ -31,35 +30,22 @@ impl Content {
 		}
 	}
 }
-impl fmt::Display for Content {
-	fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> fmt::Result {
-		write!(
-			f,
-			"| [{}] | {} {}\r\n",
-			&self.id,
-			&self.file_name,
-			&self.path.parent().unwrap().display()
-		)
-	}
-}
-enum SearchStatus {
-	Finished(FinishStatus),
-	Searching,
-}
-enum FinishStatus {
-	NoResults,
-	Results,
-}
+
 #[derive(Debug)]
 pub struct ModelData {
 	pub results: Vec<Content>,
 	rx: mpsc::Receiver<Content>,
+	rx_outcome: mpsc::Receiver<Option<Outcome>>,
+	// Outcome None means we are still searching, and Some means it has finished searching. Either with Outcome::Hits or Outcome::NoHits.
+	pub outcome: Option<Outcome>,
 }
 impl ModelData {
-	pub fn new(rx: mpsc::Receiver<Content>) -> Self {
+	pub fn new(rx: mpsc::Receiver<Content>, rx_outcome: mpsc::Receiver<Option<Outcome>>) -> Self {
 		Self {
 			results: vec![],
 			rx,
+			rx_outcome,
+			outcome: None,
 		}
 	}
 	pub fn update_results(&mut self) -> bool {
@@ -68,7 +54,13 @@ impl ModelData {
 			has_updated = true;
 			self.results.push(val);
 		}
+		self.update_outcome();
 		has_updated
+	}
+	fn update_outcome(&mut self) {
+		if let Ok(outcome) = self.rx_outcome.try_recv() {
+			self.outcome = outcome;
+		}
 	}
 }
 
@@ -77,17 +69,20 @@ pub struct Finder<'a> {
 	search_phrase: &'a str,
 	search_location: PathBuf,
 	tx: mpsc::Sender<Content>,
+	tx_outcome: mpsc::Sender<Option<Outcome>>,
 }
 impl<'a> Finder<'a> {
 	pub fn new(
 		search_phrase: &'a str,
 		search_location: PathBuf,
 		tx: mpsc::Sender<Content>,
+		tx_outcome: mpsc::Sender<Option<Outcome>>,
 	) -> Self {
 		Self {
 			search_phrase,
 			search_location,
 			tx,
+			tx_outcome,
 		}
 	}
 
@@ -103,8 +98,9 @@ impl<'a> Finder<'a> {
 	// 		})
 	// 		.unwrap_or(false)
 	// }
-	pub fn search(self) -> Result<(), Box<dyn std::error::Error>> {
+	pub fn search(self) {
 		let mut id: usize = 0;
+		self.tx_outcome.send(None).unwrap();
 		for entry in WalkDir::new(&self.search_location)
 		// .filter_entry(|e| !Self::is_ignored(e))
 		{
@@ -121,10 +117,27 @@ impl<'a> Finder<'a> {
 			}
 		}
 		if id == 0 {
-			return Err("No results were found".into());
+			self.tx_outcome.send(Some(Outcome::NoHits)).unwrap();
+		} else {
+			self.tx_outcome.send(Some(Outcome::Hits)).unwrap();
 		}
-		println!("Search finished.");
-		Ok(())
+	}
+}
+#[derive(Debug)]
+pub enum Outcome {
+	NoHits,
+	Hits,
+}
+impl fmt::Display for Outcome {
+	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+		match self {
+			Outcome::NoHits => {
+				write!(f, "Search finished with no results.")
+			}
+			Outcome::Hits => {
+				write!(f, "Search finished: ")
+			}
+		}
 	}
 }
 

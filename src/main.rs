@@ -1,7 +1,7 @@
 mod args_parser;
 use args_parser::get_args;
 mod model;
-use model::{Content, Finder, ModelData};
+use model::{Content, Finder, ModelData, Outcome};
 
 // mod quality_control;
 // use quality_control::Timer;
@@ -18,18 +18,13 @@ use std::sync::mpsc::{channel, Receiver, Sender};
 fn main() {
 	let (search_phrase, location) = get_args();
 	let (tx, rx): (Sender<Content>, Receiver<Content>) = channel();
+	let (tx_outcome, rx_outcome): (Sender<Option<Outcome>>, Receiver<Option<Outcome>>) = channel();
 	thread::spawn(move || {
-		let finder = Finder::new(&search_phrase, location, tx);
-		match finder.search() {
-			Ok(_) => (),
-			Err(_) => {
-				println!("No results were found");
-				std::process::exit(0);
-			}
-		}
+		let finder = Finder::new(&search_phrase, location, tx, tx_outcome);
+		finder.search();
 	});
 
-	let model_data = ModelData::new(rx);
+	let model_data = ModelData::new(rx, rx_outcome);
 	let view = View::new();
 	let mut controller = Controller::new(model_data, view);
 

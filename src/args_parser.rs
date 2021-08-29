@@ -14,7 +14,7 @@ pub fn get_args() -> (String, PathBuf) {
 		.arg(
 			Arg::with_name("LOCATION")
 				.help("Sets the folder you are searching")
-				.required(true)
+				.default_value(".")
 				.index(2),
 		)
 		.arg(Arg::with_name("v")

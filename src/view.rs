@@ -1,5 +1,5 @@
 use crate::controller::UserInput;
-use crate::model::ModelData;
+use crate::model::{Content, ModelData};
 
 struct TerminalSize(u16, u16);
 impl TerminalSize {
@@ -11,6 +11,7 @@ pub struct View {
 	size: TerminalSize,
 	entry_mark: usize,
 	page_mark: usize,
+	// search_status: bool,
 }
 
 impl View {
@@ -33,12 +34,50 @@ impl View {
 					print!(">>>");
 					content = Some(c.clone());
 				}
-				print!("{}", c);
+				self.print_content(c);
 			}
+		}
+		if let Some(outcome) = &data.outcome{
+			print!("{}", outcome)
+		}else{
+			print!("Nothing", )
+
 		}
 
 		println!("{}", user_input);
 		content
+	}
+	fn print_content(&self, c: &Content) {
+		let max_width = self.size.0;
+		let mut path = c
+			.path
+			.parent()
+			.unwrap()
+			.to_string_lossy()
+			.to_owned()
+			.to_string();
+		let s = format!("| [{}] | {} {}", c.id, c.file_name, path);
+		if s.len() > max_width as usize {
+			let mut diff = s.len() - max_width as usize;
+			while diff != 0 {
+				path.pop();
+				diff -= 1;
+			}
+			// Three pops so there is room for three dots at the end to indicate the path has been chopped off.
+			path.pop();
+			path.pop();
+			path.pop();
+			let s = format!("| [{}] | {} {}...", c.id, c.file_name, path);
+			print!("{}\r\n", s);
+		} else {
+			print!("{}\r\n", s);
+		}
+		// print!(
+		// 	"| [{}] | {} {}\r\n",
+		// 	c.id,
+		// 	c.file_name,
+		// 	c.path.parent().unwrap().display()
+		// );
 	}
 	pub fn next_page(&mut self, len: usize) {
 		if self.page_mark > len.saturating_sub(self.size.1 as usize) {
