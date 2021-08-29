@@ -1,4 +1,4 @@
-# FinderRunner
+# FindRun
 
 Use this to search for a program or a folder, get matching results and open what you searched for at once. 
 
@@ -19,7 +19,7 @@ I want the tui interface to open at once, and the search to go immediately. When
 
 Everytime you open a match, that folder gets added to saved to a list of high priority folders. These are saved and are the first ones to be searched.
 
-## Things to do
+## Thoughts
 Using the mvc pattern I need to implement several things. Listed in order of priority, kind of.
 
 
@@ -33,3 +33,12 @@ Using the mvc pattern I need to implement several things. Listed in order of pri
 	- https://blog.logrocket.com/rust-and-tui-building-a-command-line-interface-in-rust/
 	- One solution is to code the TUI very much by hand in crossterm.
 	- Another solution is to do something like this https://monkeypatch.io/blog/2021/2021-05-31-rust-tui/
+
+- Controller
+	- Keeps track of everything.
+
+## To Do
+- Regex search
+- Fuzzy search
+- Fuzzy search for found results
+	- When you enter a string after searching the results found so far should be fuzzy searched through. 
