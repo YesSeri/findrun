@@ -42,7 +42,14 @@ impl fmt::Display for Content {
 		)
 	}
 }
-
+enum SearchStatus {
+	Finished(FinishStatus),
+	Searching,
+}
+enum FinishStatus {
+	NoResults,
+	Results,
+}
 #[derive(Debug)]
 pub struct ModelData {
 	pub results: Vec<Content>,

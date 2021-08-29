@@ -76,8 +76,7 @@ impl Controller {
 				}
 				match control_event {
 					ControlEvent::Open => {
-						let i = self.user_input.get_input();
-						if let Some(index) = i {
+						if let Some(index) = self.user_input.get_input() {
 							if let Some(content) = self.data.results.get(index) {
 								content.open_file();
 							}
