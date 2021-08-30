@@ -58,7 +58,8 @@ impl Controller {
 		loop {
 			let has_updated = self.data.update_results();
 			if has_updated {
-				self.selected_content = self.view.paint(&self.data, &self.user_input);
+				// self.selected_content = self.view.paint(&self.data, &self.user_input);
+				self.view.paint(&self.data, &self.user_input);
 			}
 			if poll(time::Duration::from_millis(1_000))? {
 				let event = read()?;
@@ -85,7 +86,8 @@ impl Controller {
 						}
 					}
 					ControlEvent::Update => {
-						self.selected_content = self.view.paint(&self.data, &self.user_input);
+						// self.selected_content = self.view.paint(&self.data, &self.user_input);
+						self.view.paint(&self.data, &self.user_input);
 					}
 					_ => {}
 				}
