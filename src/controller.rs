@@ -67,7 +67,7 @@ impl Controller {
 					Event::Key(k) => self.handle_keycode(k.code),
 					Event::Resize(x, y) => {
 						self.view.handle_resize(x, y);
-						ControlEvent::Nothing
+						ControlEvent::Update
 					}
 					Event::Mouse(_) => ControlEvent::Nothing,
 				};

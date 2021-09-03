@@ -38,8 +38,8 @@ impl View {
 		for i in start..=end {
 			let content = data.results.get(i);
 			if let Some(c) = content {
-				self.print_content1(c);
-			// println!("{}", c);
+				let s = self.format_content(c);
+				println!("{}", s);
 			} else {
 				break;
 			}
@@ -51,45 +51,15 @@ impl View {
 			print!("searching");
 		}
 		print!(" | Input:  {}\r\n", user_input);
-
-		// if end > data.results.len() {
-
-		// }
-
-		// let part = Vec::from_iter(slice[start..end].iter().cloned());
-		// print!("{:#?}\r\n", part);
 	}
-	// pub fn paint(&self, data: &ModelData, user_input: &UserInput) -> Option<crate::model::Content> {
-	// 	print!("\x1B[2J");
-	// 	let mut content = None;
-	// 	for (entry_idx, i) in
-	// 		(self.page_mark..self.size.1 as usize + self.page_mark - 2).enumerate()
-	// 	{
-	// 		if let Some(c) = data.results.get(i) {
-	// 			if entry_idx == self.entry_mark {
-	// 				print!(">>>");
-	// 				content = Some(c.clone());
-	// 			}
-	// 			self.print_content(c);
-	// 		}
-	// 	}
-	// 	if let Some(outcome) = &data.outcome{
-	// 		print!("{}\r\n", outcome)
-	// 	}else{
-	// 		print!("Still searching: \r\n")
 
-	// 	}
-
-	// 	println!("{}", user_input);
-	// 	content
-	// }
-	fn print_content1(&self, c: &Content) {
+	fn format_content(&self, c: &Content) -> String {
 		let max_width = self.term_size.0 as usize;
 		let mut path = c.path.to_string_lossy().to_string();
-		let s = format!("| [{}] | {} {}", c.id, c.file_name, &path);
+		let mut s = format!("| [{}] | {} | {}", c.id, c.file_name, &path);
 		let width_left = max_width - 7 + c.id.to_string().len();
 		if s.len() > width_left {
-			let mut diff = s.len() - max_width;
+			let mut diff = s.len() - width_left;
 			while diff != 0 {
 				path.pop();
 				diff -= 1;
@@ -98,44 +68,10 @@ impl View {
 			path.pop();
 			path.pop();
 			path.pop();
-			let s = format!("| [{}] | {} {}...", c.id, c.file_name, path);
-			print!("{}\r\n", s);
-		} else {
-			print!("{}\r\n", s);
+			s = format!("| [{}] | {} | {}...", c.id, c.file_name, path);
 		}
+		s
 	}
-	// fn print_content(&self, c: &Content) {
-	// 	let max_width = self.term_size.0;
-	// 	let mut path = c
-	// 		.path
-	// 		.parent()
-	// 		.unwrap()
-	// 		.to_string_lossy()
-	// 		.to_owned()
-	// 		.to_string();
-	// 	let s = format!("| [{}] | {} {}", c.id, c.file_name, path);
-	// 	if s.len() > max_width as usize {
-	// 		let mut diff = s.len() - max_width as usize;
-	// 		while diff != 0 {
-	// 			path.pop();
-	// 			diff -= 1;
-	// 		}
-	// 		// Three pops so there is room for three dots at the end to indicate the path has been chopped off.
-	// 		path.pop();
-	// 		path.pop();
-	// 		path.pop();
-	// 		let s = format!("| [{}] | {} {}...", c.id, c.file_name, path);
-	// 		print!("{}\r\n", s);
-	// 	} else {
-	// 		print!("{}\r\n", s);
-	// 	}
-	// 	// print!(
-	// 	// 	"| [{}] | {} {}\r\n",
-	// 	// 	c.id,
-	// 	// 	c.file_name,
-	// 	// 	c.path.parent().unwrap().display()
-	// 	// );
-	// }
 	fn per_page(&self) -> usize {
 		let height: usize = self.term_size.1.into();
 		height - 3
