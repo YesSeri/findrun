@@ -117,7 +117,7 @@ impl Controller {
 				ControlEvent::Update
 			}
 			KeyCode::Esc => {
-				println!("Program quit");
+				print!("Program quit\r\n");
 				ControlEvent::Open
 			}
 			_ => ControlEvent::Nothing,

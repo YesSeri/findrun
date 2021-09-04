@@ -1,7 +1,5 @@
 use crate::controller::UserInput;
 use crate::model::{Content, ModelData};
-use std::fmt;
-use std::slice::Iter;
 
 struct TerminalSize(u16, u16);
 impl TerminalSize {
@@ -14,11 +12,7 @@ pub struct View {
 	entry_mark: usize,
 	page_mark: usize,
 }
-impl fmt::Display for Content {
-	fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-		write!(f, "[{}] | {}", self.id, self.file_name)
-	}
-}
+
 
 impl View {
 	pub fn new() -> Self {
@@ -39,7 +33,7 @@ impl View {
 			let content = data.results.get(i);
 			if let Some(c) = content {
 				let s = self.format_content(c);
-				println!("{}", s);
+				print!("{}\r\n", s);
 			} else {
 				break;
 			}
